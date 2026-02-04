@@ -1,0 +1,80 @@
+{
+    "FCFS1": {
+        "PID 1": {
+            "turn_around_time": "700ms",
+            "waiting_time": "0ms"
+        },
+        "PID 2": {
+            "turn_around_time": "420ms",
+            "waiting_time": "360ms"
+        },
+        "PID 3": {
+            "turn_around_time": "560ms",
+            "waiting_time": "258ms"
+        },
+        "Average": {
+            "turn_around_time": "560ms",
+            "waiting_time": "206ms"
+        }
+    },
+    "FCFS2": {
+        "PID 1": {
+            "turn_around_time": "432ms",
+            "waiting_time": "0ms"
+        },
+        "PID 2": {
+            "turn_around_time": "159ms",
+            "waiting_time": "109ms"
+        },
+        "PID 3": {
+            "turn_around_time": "60ms",
+            "waiting_time": "0ms"
+        },
+        "PID 4": {
+            "turn_around_time": "655ms",
+            "waiting_time": "0ms"
+        },
+        "PID 5": {
+            "turn_around_time": "332ms",
+            "waiting_time": "245ms"
+        },
+        "PID 6": {
+            "turn_around_time": "276ms",
+            "waiting_time": "60ms"
+        },
+        "Average": {
+            "turn_around_time": "319ms",
+            "waiting_time": "69ms"
+        }
+    },
+    "FCFS3": {
+        "PID 1": {
+            "turn_around_time": "2000ms",
+            "waiting_time": "0ms"
+        },
+        "PID 2": {
+            "turn_around_time": "2040ms",
+            "waiting_time": "1977ms"
+        },
+        "PID 3": {
+            "turn_around_time": "1083ms",
+            "waiting_time": "1063ms"
+        },
+        "PID 4": {
+            "turn_around_time": "1115ms",
+            "waiting_time": "1060ms"
+        },
+        "PID 5": {
+            "turn_around_time": "2104ms",
+            "waiting_time": "1105ms"
+        },
+        "PID 6": {
+            "turn_around_time": "2068ms",
+            "waiting_time": "1737ms"
+        },
+        "Average": {
+            "turn_around_time": "1735ms",
+            "waiting_time": "1157ms"
+        }
+    }
+}

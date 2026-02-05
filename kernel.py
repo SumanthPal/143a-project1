@@ -40,12 +40,17 @@ class Kernel:
         self.running = self.idle_pcb
         self.logger = logger
         
+        # RR
         self.time_quantum = 40 
     
         self.foreground_queue = deque() 
         self.background_queue = deque() 
         self.current_level = "Foreground" 
         self.level_time = 0  
+
+        # multilevel
+        self.level_quantum = 200
+
     # This method is triggered every time a new process has arrived.
     # new_process is this process's PID.
     # DO NOT rename or delete this method. DO NOT change its arguments.
@@ -66,12 +71,11 @@ class Kernel:
                     self.ready_queue = deque(sorted(self.ready_queue, key=lambda pcb: (pcb.priority, pcb.pid)))
                 self.running = self.choose_next_process()
         elif self.scheduling_algorithm == "Multilevel":
+            new_pcb.time_remaining = self.time_quantum  # for RR if foreground
             if process_type == "Foreground":
-                new_pcb.time_remaining = self.time_quantum
                 self.foreground_queue.append(new_pcb)
-            else:  
+            else:
                 self.background_queue.append(new_pcb)
-            
             if self.running.pid == 0:
                 self.running = self.choose_next_process()
         else: 
@@ -84,6 +88,9 @@ class Kernel:
     # This method is triggered every time the current process performs an exit syscall.
     # DO NOT rename or delete this method. DO NOT change its arguments.
     def syscall_exit(self) -> PID:
+        if self.scheduling_algorithm == "Multilevel":
+            self.running = self.choose_next_process()
+            return self.running.pid
         self.running = self.choose_next_process()
         return self.running.pid
     
@@ -109,34 +116,25 @@ class Kernel:
             next_pcb = self.ready_queue.popleft()
             next_pcb.time_remaining = self.time_quantum
             return next_pcb
-        
         elif self.scheduling_algorithm == "Multilevel":
+            if self.current_level == "Foreground" and not self.foreground_queue:
+                if self.background_queue:
+                    self.current_level = "Background"
+                    self.level_time = 0
+            elif self.current_level == "Background" and not self.background_queue:
+                if self.foreground_queue:
+                    self.current_level = "Foreground"
+                    self.level_time = 0
             if self.current_level == "Foreground":
-                if len(self.foreground_queue) > 0:
-                    next_pcb = self.foreground_queue.popleft()
-                    next_pcb.time_remaining = self.time_quantum
-                    return next_pcb
-                else:
-                    if len(self.background_queue) > 0:
-                        self.current_level = "Background"
-                        self.level_time = 0
-                        next_pcb = self.background_queue.popleft()
-                        return next_pcb
-                    else:
-                        return self.idle_pcb
-            else:  
-                if len(self.background_queue) > 0:
-                    next_pcb = self.background_queue.popleft()
-                    return next_pcb
-                else:
-                    if len(self.foreground_queue) > 0:
-                        self.current_level = "Foreground"
-                        self.level_time = 0
-                        next_pcb = self.foreground_queue.popleft()
-                        next_pcb.time_remaining = self.time_quantum
-                        return next_pcb
-                    else:
-                        return self.idle_pcb
+                if not self.foreground_queue:
+                    return self.idle_pcb
+                pcb = self.foreground_queue.popleft()
+                pcb.time_remaining = self.time_quantum 
+                return pcb
+            else: 
+                if not self.background_queue:
+                    return self.idle_pcb
+                return self.background_queue.popleft()
         else:
             self.logger("Unknown scheduling algorithm")
             return self.idle_pcb
@@ -164,33 +162,37 @@ class Kernel:
                     self.ready_queue.append(self.running)
                     self.running = self.choose_next_process()
         elif self.scheduling_algorithm == "Multilevel":
-            self.level_time += 10
-
-            if self.current_level == "Foreground":
-                if self.running.pid != 0:
+            if self.running.pid != 0:
+                self.level_time += 10
+                if self.current_level == "Foreground":
                     self.running.time_remaining -= 10
                     if self.running.time_remaining <= 0:
                         self.foreground_queue.append(self.running)
-                        self.running = self.choose_next_process()
+                        if self.foreground_queue:
+                            self.running = self.foreground_queue.popleft()
+                            self.running.time_remaining = self.time_quantum
+                        else:
+                            if self.background_queue:
+                                self.current_level = "Background"
+                                self.level_time = 0
+                                self.running = self.background_queue.popleft()
+                            else:
+                                self.running = self.idle_pcb
+                    return self.running.pid
                 if self.level_time >= 200:
-                    if len(self.background_queue) > 0:
-                        if self.running.pid != 0:
-                            self.foreground_queue.append(self.running)
+                    if self.current_level == "Foreground" and self.background_queue:
+                        self.foreground_queue.append(self.running)
                         self.current_level = "Background"
                         self.level_time = 0
                         self.running = self.choose_next_process()
-                    else:
-                        self.level_time = 0
-
-            else:  
-                if self.level_time >= 200:
-                    if len(self.foreground_queue) > 0:
-                        if self.running.pid != 0:
-                            self.background_queue.append(self.running)
+                    elif self.current_level == "Background" and self.foreground_queue:
+                        self.background_queue.append(self.running)
                         self.current_level = "Foreground"
                         self.level_time = 0
                         self.running = self.choose_next_process()
                     else:
                         self.level_time = 0
+
+            return self.running.pid
 
         return self.running.pid

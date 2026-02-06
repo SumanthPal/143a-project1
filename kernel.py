@@ -1,4 +1,3 @@
-
 ### Fill in the following information before submitting
 # Group id: 2
 # Members: Isha Kotalwar, Arnav Pandey, Sumanth Pallamreddy
@@ -48,7 +47,6 @@ class Kernel:
         self.background_queue = deque() 
         self.current_level = "Foreground" 
         self.level_time = 0  
-        self.level_quantum = 200
         self.total_time = 0  
         self.level_switch_time = 200  
 
@@ -66,7 +64,6 @@ class Kernel:
                 self.foreground_queue.append(new_pcb)
             else: 
                 self.background_queue.append(new_pcb)
-            
             if self.running.pid == 0:
                 self.running = self.choose_next_process()
             
@@ -124,7 +121,7 @@ class Kernel:
                     return next_pcb
                 elif len(self.background_queue) > 0:
                     self.current_level = "Background"
-                    self.level_time = 0
+                    self.level_switch_time = self.total_time + 200
                     return self.background_queue.popleft()
                 else:
                     return self.idle_pcb
@@ -133,7 +130,7 @@ class Kernel:
                     return self.background_queue.popleft()
                 elif len(self.foreground_queue) > 0:
                     self.current_level = "Foreground"
-                    self.level_time = 0
+                    self.level_switch_time = self.total_time + 200
                     next_pcb = self.foreground_queue.popleft()
                     next_pcb.time_remaining = self.time_quantum
                     return next_pcb
@@ -169,30 +166,31 @@ class Kernel:
         elif self.scheduling_algorithm == "Multilevel":
             if self.running.pid == 0:
                 return self.running.pid
-
             self.total_time += 10
             if self.total_time >= self.level_switch_time:
-                if self.current_level == "Foreground" and len(self.background_queue) > 0:
-                    self.foreground_queue.append(self.running)
-
-                    self.current_level = "Background"
-                    self.level_switch_time = self.total_time + 200
-                    self.running = self.choose_next_process()
-                    return self.running.pid
-                if self.current_level == "Background" and len(self.foreground_queue) > 0:
-                    self.background_queue.appendleft(self.running)
-
-                    self.current_level = "Foreground"
-                    self.level_switch_time = self.total_time + 200
-                    self.running = self.choose_next_process()
-                    return self.running.pid
-                self.level_switch_time = self.total_time + 200
+                if self.current_level == "Foreground":
+                    if len(self.background_queue) > 0:
+                        self.foreground_queue.append(self.running)
+                        self.current_level = "Background"
+                        self.level_switch_time = self.total_time + 200
+                        self.running = self.choose_next_process()
+                        return self.running.pid
+                    else:
+                        self.level_switch_time = self.total_time + 200
+                elif self.current_level == "Background":
+                    if len(self.foreground_queue) > 0:
+                        self.background_queue.appendleft(self.running)
+                        self.current_level = "Foreground"
+                        self.level_switch_time = self.total_time + 200
+                        self.running = self.choose_next_process()
+                        return self.running.pid
+                    else:
+                        self.level_switch_time = self.total_time + 200                
             if self.current_level == "Foreground" and self.running.process_type == "Foreground":
                 self.running.time_remaining -= 10
                 if self.running.time_remaining <= 0:
                     self.foreground_queue.append(self.running)
                     self.running = self.choose_next_process()
                     return self.running.pid
-
             return self.running.pid 
         return self.running.pid

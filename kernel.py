@@ -124,6 +124,8 @@ class Kernel:
                     self.level_switch_time = self.total_time + 200
                     return self.background_queue.popleft()
                 else:
+                    self.current_level = "Foreground"
+                    self.level_switch_time = self.total_time + 200
                     return self.idle_pcb
             else:  
                 if len(self.background_queue) > 0:
@@ -135,6 +137,8 @@ class Kernel:
                     next_pcb.time_remaining = self.time_quantum
                     return next_pcb
                 else:
+                    self.current_level = "Foreground"
+                    self.level_switch_time = self.total_time + 200
                     return self.idle_pcb
         else:
             self.logger("Unknown scheduling algorithm")
@@ -164,9 +168,12 @@ class Kernel:
                     self.running = self.choose_next_process()
                     
         elif self.scheduling_algorithm == "Multilevel":
-            if self.running.pid == 0:
-                return self.running.pid
             self.total_time += 10
+            if self.running.pid == 0:
+                if len(self.foreground_queue) > 0 or len(self.background_queue) > 0:
+                    self.running = self.choose_next_process()
+                return self.running.pid
+
             if self.total_time >= self.level_switch_time:
                 if self.current_level == "Foreground":
                     if len(self.background_queue) > 0:

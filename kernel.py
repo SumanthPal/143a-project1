@@ -64,7 +64,12 @@ class Kernel:
         new_pcb.priority = priority
         new_pcb.process_type = process_type
         
-        if self.scheduling_algorithm == "Multilevel":
+        if self.scheduling_algorithm == "FCFS":
+            self.ready_queue.append(new_pcb)
+            if self.running.pid == 0:
+                self.running = self.choose_next_process()
+        
+        elif self.scheduling_algorithm == "Multilevel":
             if process_type == "Foreground":
                 self.foreground_queue.append(new_pcb)
             else:
@@ -220,7 +225,6 @@ class Kernel:
         return self.running.pid
 
     def add_to_ready_queue(self, pcb: PCB):
-        """Add a process to the ready queue according to scheduling algorithm rules"""
         if self.scheduling_algorithm == "FCFS":
             self.ready_queue.append(pcb)
         elif self.scheduling_algorithm == "Priority":
@@ -258,22 +262,27 @@ class Kernel:
                     unblocked_pcb = blocked_list[0]
                     self.semaphore_queues[semaphore_id].remove(unblocked_pcb)
                     self.add_to_ready_queue(unblocked_pcb)
-                    
+                    if self.running.pid == 0:
+                        self.running = self.choose_next_process()
+
                 elif self.scheduling_algorithm == "RR":
                     blocked_list = list(self.semaphore_queues[semaphore_id])
                     blocked_list.sort(key=lambda pcb: pcb.pid)
                     unblocked_pcb = blocked_list[0]
                     self.semaphore_queues[semaphore_id].remove(unblocked_pcb)
                     self.add_to_ready_queue(unblocked_pcb)
-                    
+                    if self.running.pid == 0:
+                        self.running = self.choose_next_process()
+
                 elif self.scheduling_algorithm == "Priority":
                     blocked_list = list(self.semaphore_queues[semaphore_id])
                     blocked_list.sort(key=lambda pcb: (pcb.priority, pcb.pid))
                     unblocked_pcb = blocked_list[0]
                     self.semaphore_queues[semaphore_id].remove(unblocked_pcb)
                     self.add_to_ready_queue(unblocked_pcb)
-                    
-                    if self.running.pid != 0 and unblocked_pcb.priority < self.running.priority:
+                    if self.running.pid == 0:
+                        self.running = self.choose_next_process()
+                    elif unblocked_pcb.priority < self.running.priority:
                         self.ready_queue.append(self.running)
                         self.ready_queue = deque(sorted(self.ready_queue, key=lambda p: (p.priority, p.pid)))
                         self.running = self.choose_next_process()
@@ -301,6 +310,7 @@ class Kernel:
     # DO NOT rename or delete this method. DO NOT change its arguments.
     def syscall_mutex_unlock(self, mutex_id: int) -> PID:
         self.mutexes[mutex_id] = None
+        
         if len(self.mutex_queues[mutex_id]) > 0:
             if self.scheduling_algorithm == "RR":
                 blocked_list = list(self.mutex_queues[mutex_id])
@@ -309,7 +319,9 @@ class Kernel:
                 self.mutex_queues[mutex_id].remove(unblocked_pcb)
                 self.mutexes[mutex_id] = unblocked_pcb.pid
                 self.add_to_ready_queue(unblocked_pcb)
-                
+                if self.running.pid == 0:
+                    self.running = self.choose_next_process()
+
             elif self.scheduling_algorithm == "Priority":
                 blocked_list = list(self.mutex_queues[mutex_id])
                 blocked_list.sort(key=lambda pcb: (pcb.priority, pcb.pid))
@@ -317,7 +329,9 @@ class Kernel:
                 self.mutex_queues[mutex_id].remove(unblocked_pcb)
                 self.mutexes[mutex_id] = unblocked_pcb.pid
                 self.add_to_ready_queue(unblocked_pcb)
-                if self.running.pid != 0 and unblocked_pcb.priority < self.running.priority:
+                if self.running.pid == 0:
+                    self.running = self.choose_next_process()
+                elif unblocked_pcb.priority < self.running.priority:
                     self.ready_queue.append(self.running)
                     self.ready_queue = deque(sorted(self.ready_queue, key=lambda p: (p.priority, p.pid)))
                     self.running = self.choose_next_process()
